@@ -8,7 +8,7 @@ import pynput
 from PyQt5.QtWidgets import *
 from xdo import Xdo
 from main_ui import Ui_MainWindow
-from pynput.keyboard import Key, Controller, Listener as KeyListener
+from pynput.keyboard import KeyCode, Key, Controller, Listener as KeyListener
 from quamash import QEventLoop, QThreadExecutor
 import asyncio
 from watchdog.observers import Observer
@@ -33,11 +33,10 @@ keyboard = Controller()
 fileObserver = Observer()
 
 ttsEngine = pyttsx3.init()
-ttsEngine.setProperty("rate", 220)
+ttsEngine.setProperty("rate", 200)
 ttsEngine.setProperty("voice", "whisper")
 
 class Tpyer:
-
     winID = -1
     selfWinID = -1
     fileWatch = None
@@ -47,16 +46,16 @@ class Tpyer:
     keyListener = None
 
     def __init__(self):
-        ui.textTypeSpeed.hide()
-        ui.buttonReload.hide()
-
         ui.buttonSelectWin.clicked.connect(self.onSelectWin)
         ui.actionOpen_File.triggered.connect(self.onSelectFile)
-        ui.buttonPlay.clicked.connect(self.onPlay)
+        ui.buttonTypeSpeak.clicked.connect(lambda : self.onPlay(canType=True, canSpeak=True))
+        ui.buttonType.clicked.connect(lambda : self.onPlay(canType=True, canSpeak=False))
+        ui.buttonSpeak.clicked.connect(lambda : self.onPlay(canType=False, canSpeak=True))
         ui.buttonStop.clicked.connect(self.onStop)
+
         win.loadFileSignal.connect(self.loadFile)
 
-        # stop typing when esc key is pressed
+        # stop playing when esc key is pressed
         def onKeypress(key):
             if key == Key.esc:
                 print("esc pressed, stopping")
@@ -70,7 +69,6 @@ class Tpyer:
 
     async def typeText(self, text, delay):
         id = self.winID
-        ttsEngine.say(text)
         for ch in text:
             k = ch
             if ch == "\n":
@@ -82,11 +80,15 @@ class Tpyer:
                 xd.activate_window(id)
             except:
                 continue
-            keyboard.press(k)
-            keyboard.release(k)
+
+            try:
+                keyboard.press(k)
+                keyboard.release(k)
+            except:
+                print("untypable key: {}".format(ch))
 
             if ch == " ":
-                await asyncio.sleep(0.01 + random() * delay*2)
+                await asyncio.sleep(0.01 + random() * delay*1.3)
             else:
                 await asyncio.sleep(0.01 + random() * delay)
 
@@ -127,36 +129,51 @@ class Tpyer:
             self.loadingFile = False
         loop.create_task(run())
 
-    def onStop(self):
-        ttsEngine.stop()
-        self.playing = False
+    def setPlaying(self, val):
+        ui.buttonTypeSpeak.setEnabled(not val)
+        ui.buttonType.setEnabled(not val)
+        ui.buttonSpeak.setEnabled(not val)
+        ui.buttonStop.setEnabled(val)
+        self.playing = val
 
-    def onPlay(self):
+    def onStop(self):
+        self.setPlaying(False)
+        ttsEngine.stop()
+
+    def onPlay(self, canSpeak=True, canType=True):
+        if self.playing:
+            return
+
         id = self.winID
-        if id == self.selfWinID or id < 0:
-            self.showStatus("no valid window selected")
+        if canType and (id == self.selfWinID or id < 0):
+            self.showStatus("select a window to type text on")
             return
 
         lines = [item.text() for item in ui.listLines.selectedItems()]
 
         if not lines:
-            self.showStatus("select lines to type")
+            self.showStatus("select lines to type or speak")
             return
 
+        self.setPlaying(True)
         async def run():
-            self.playing = True
-            xd.raise_window(id)
-            delay = 0.05
+            if canType:
+                xd.raise_window(id)
 
-            self.showStatus("typing...")
+            delay = 0.06
+            self.showStatus("playing... press esc to stop")
             for line in lines:
-                await self.typeText(line, delay)
-                await asyncio.sleep(delay*2.5);
                 if not self.playing:
                     break
+                if canSpeak:
+                    ttsEngine.say(line)
+                if canType:
+                    await self.typeText(line, delay)
+                while ttsEngine.isBusy():
+                    await asyncio.sleep(0.5);
 
             self.showStatus("done.")
-            self.playing = False
+            self.setPlaying(False)
         loop.create_task(run())
 
     def onSelectWin(self):
