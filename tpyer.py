@@ -7,13 +7,15 @@ import pynput
 from PyQt5.QtWidgets import *
 from xdo import Xdo
 from main_ui import Ui_MainWindow
-from pynput.keyboard import Key, Controller
+from pynput.keyboard import Key, Controller, Listener as KeyListener
 from quamash import QEventLoop, QThreadExecutor
 import asyncio
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers.api import ObservedWatch
 from PyQt5.QtCore import pyqtSignal
+from threading import Thread
+import pyttsx3
 
 class MainWindow(QMainWindow):
     loadFileSignal = pyqtSignal(object)
@@ -28,6 +30,10 @@ xd = Xdo()
 keyboard = Controller()
 fileObserver = Observer()
 
+ttsEngine = pyttsx3.init()
+ttsEngine.setProperty("rate", 220)
+ttsEngine.setProperty("voice", "whisper")
+
 class Tpyer:
 
     winID = -1
@@ -36,13 +42,28 @@ class Tpyer:
     loadingFile = False
     watchedFilename = ""
     playing = False
+    keyListener = None
 
     def __init__(self):
+        ui.textTypeSpeed.hide()
+        ui.buttonReload.hide()
+
         ui.buttonSelectWin.clicked.connect(self.onSelectWin)
         ui.actionOpen_File.triggered.connect(self.onSelectFile)
         ui.buttonPlay.clicked.connect(self.onPlay)
         ui.buttonStop.clicked.connect(self.onStop)
         win.loadFileSignal.connect(self.loadFile)
+
+        # stop typing when esc key is pressed
+        def onKeypress(key):
+            if key == Key.esc:
+                print("esc pressed, stopping")
+                self.onStop()
+
+        self.keyListener =  KeyListener(on_press=onKeypress)
+        t = Thread(target=lambda : self.keyListener.run())
+        t.start()
+
 
     def show(self):
         win.show()
@@ -50,12 +71,18 @@ class Tpyer:
 
     async def typeText(self, text, delay):
         id = self.winID
+        ttsEngine.say(text)
         for ch in text:
             k = ch
             if ch == "\n":
                 k = Key.enter
             elif ch == "\t":
                 k = Key.tab
+
+            try:
+                xd.activate_window(id)
+            except:
+                continue
             keyboard.press(k)
             keyboard.release(k)
 
@@ -64,12 +91,11 @@ class Tpyer:
             else:
                 await asyncio.sleep(0.01 + random() * delay)
 
-            actwin = xd.get_active_window()
-            if id != actwin or not self.playing:
+            if not self.playing:
                 return
 
     def onSelectFile(self):
-        filename, _ = QFileDialog.getOpenFileName(win, filter="*.txt")
+        filename, _ = QFileDialog.getOpenFileName(win)
         if not filename:
             return
         self.loadFile(filename)
@@ -103,6 +129,7 @@ class Tpyer:
         loop.create_task(run())
 
     def onStop(self):
+        ttsEngine.stop()
         self.playing = False
 
     def onPlay(self):
@@ -111,7 +138,9 @@ class Tpyer:
             self.showStatus("no valid window selected")
             return
 
-        if not ui.listLines.selectedItems():
+        lines = [item.text() for item in ui.listLines.selectedItems()]
+
+        if not lines:
             self.showStatus("select lines to type")
             return
 
@@ -119,10 +148,14 @@ class Tpyer:
             self.playing = True
             xd.raise_window(id)
             delay = 0.05
+
             self.showStatus("typing...")
-            for item in ui.listLines.selectedItems():
-                await self.typeText(item.text(), delay)
+            for line in lines:
+                await self.typeText(line, delay)
                 await asyncio.sleep(delay*2.5);
+                if not self.playing:
+                    break
+
             self.showStatus("done.")
             self.playing = False
         loop.create_task(run())
@@ -137,7 +170,8 @@ class Tpyer:
                 return;
 
             self.winID = id;
-            self.showStatus("selected window: {}".format(self.winID))
+            winname = str(xd.get_window_name(self.winID))
+            self.showStatus("selected window: id={}   name={} ".format(id, winname))
             ui.buttonSelectWin.setEnabled(True)
         loop.create_task(run())
 
@@ -164,7 +198,11 @@ if __name__ == "__main__":
 
     tp.show()
     fileObserver.start()
+    Thread(target=lambda : ttsEngine.startLoop()).start()
 
     with loop:
         loop.run_forever()
+
+    sys.exit(0)
+
 
