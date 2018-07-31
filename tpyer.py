@@ -1,7 +1,8 @@
 
-from os import path
+from os import path, _exit
 import sys
 import time
+import signal
 from random import random
 import pynput
 from PyQt5.QtWidgets import *
@@ -15,6 +16,7 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers.api import ObservedWatch
 from PyQt5.QtCore import pyqtSignal
 from threading import Thread
+from concurrent.futures import ThreadPoolExecutor
 import pyttsx3
 
 class MainWindow(QMainWindow):
@@ -61,9 +63,6 @@ class Tpyer:
                 self.onStop()
 
         self.keyListener =  KeyListener(on_press=onKeypress)
-        t = Thread(target=lambda : self.keyListener.run())
-        t.start()
-
 
     def show(self):
         win.show()
@@ -192,17 +191,17 @@ class Tpyer:
 tp = Tpyer()
 
 if __name__ == "__main__":
-    import signal
     # exit when ctrl-c'ed from the terminal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     tp.show()
     fileObserver.start()
-    Thread(target=lambda : ttsEngine.startLoop()).start()
+
+    executor = ThreadPoolExecutor(max_workers=10)
+    executor.submit(ttsEngine.startLoop)
+    executor.submit(tp.keyListener.run)
 
     with loop:
         loop.run_forever()
 
-    sys.exit(0)
-
-
+    _exit(0)
