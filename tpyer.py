@@ -14,7 +14,8 @@ import asyncio
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers.api import ObservedWatch
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, pyqtProperty, Qt
+from PyQt5.QtGui import QColor
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
 import pyttsx3
@@ -32,9 +33,25 @@ xd = Xdo()
 keyboard = Controller()
 fileObserver = Observer()
 
+voices = [
+    "m1",
+    "f1",
+    "m4",
+    "m7",
+    "f5",
+    "croak",
+    "klatt1",
+    "klatt4",
+    "whisper",
+    "whisperf",
+]
 ttsEngine = pyttsx3.init()
-ttsEngine.setProperty("rate", 200)
-ttsEngine.setProperty("voice", "whisper")
+
+# map [0, 100] to [1, 0.001]
+def typeSpeedToMs(x): return 1 - x/100*(1-0.001)
+
+# map [0, 100] to [0, 240]
+def speechSpeedToRate(x): return int(x/100 * 240)
 
 class Tpyer:
     winID = -1
@@ -45,15 +62,27 @@ class Tpyer:
     playing = False
     keyListener = None
 
+    initSpeechSpeed = 60
+    initTypeSpeed   = 80
+
     def __init__(self):
+        ui.numType.setRange(0, 100)
+        ui.numSpeech.setRange(0, 100)
         ui.buttonSelectWin.clicked.connect(self.onSelectWin)
         ui.actionOpen_File.triggered.connect(self.onSelectFile)
         ui.buttonTypeSpeak.clicked.connect(lambda : self.onPlay(canType=True, canSpeak=True))
         ui.buttonType.clicked.connect(lambda : self.onPlay(canType=True, canSpeak=False))
         ui.buttonSpeak.clicked.connect(lambda : self.onPlay(canType=False, canSpeak=True))
         ui.buttonStop.clicked.connect(self.onStop)
-
+        ui.numSpeech.valueChanged.connect(self.onNumSpeechChange)
         win.loadFileSignal.connect(self.loadFile)
+
+        ui.cmbVoice.clear()
+        ui.cmbVoice.addItems(voices)
+        ui.cmbVoice.currentTextChanged.connect(self.onCmbVoiceChange)
+
+        ui.numSpeech.setValue(self.initSpeechSpeed)
+        ui.numType.setValue(self.initTypeSpeed)
 
         # stop playing when esc key is pressed
         def onKeypress(key):
@@ -140,6 +169,18 @@ class Tpyer:
         self.setPlaying(False)
         ttsEngine.stop()
 
+    def getDelay(self):
+        return typeSpeedToMs(ui.numType.value())
+
+    def onNumSpeechChange(self, val):
+        rate = speechSpeedToRate(val)
+        print("change speech rate: {} => {}".format(val, rate))
+        ttsEngine.setProperty("rate", rate)
+
+    def onCmbVoiceChange(self, val):
+        print("change voice: {}".format(val))
+        ttsEngine.setProperty("voice", val)
+
     def onPlay(self, canSpeak=True, canType=True):
         if self.playing:
             return
@@ -160,7 +201,7 @@ class Tpyer:
             if canType:
                 xd.raise_window(id)
 
-            delay = 0.06
+            delay = self.getDelay()
             self.showStatus("playing... press esc to stop")
             for line in lines:
                 if not self.playing:
@@ -170,7 +211,7 @@ class Tpyer:
                 if canType:
                     await self.typeText(line, delay)
                 while ttsEngine.isBusy():
-                    await asyncio.sleep(0.5);
+                    await asyncio.sleep(0.15);
 
             self.showStatus("done.")
             self.setPlaying(False)
@@ -221,4 +262,12 @@ if __name__ == "__main__":
     with loop:
         loop.run_forever()
 
+    # Without explicit exit, the main thread just
+    # indefinitely blocks and wait for other
+    # threads to stop, which doesn't happen.
+    # I actualy tried stopping each one of them,
+    # but it still has a 1/3 chance of hanging up.
+    # Of course, I'm probably doing something wrong,
+    # but this serves as a nice duct tape.
     _exit(0)
+

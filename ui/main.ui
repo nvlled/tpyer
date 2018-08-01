@@ -6,27 +6,51 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>452</width>
-    <height>478</height>
+    <width>526</width>
+    <height>569</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <property name="styleSheet">
-   <string notr="true"/>
+   <string notr="true">background-color: #225; color: #aff</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0,0">
+   <property name="font">
+    <font>
+     <family>DejaVu Sans Mono</family>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0">
     <property name="sizeConstraint">
      <enum>QLayout::SetDefaultConstraint</enum>
     </property>
-    <item row="1" column="0" colspan="8">
+    <item row="0" column="5">
+     <widget class="QPushButton" name="buttonSelectWin">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="text">
+       <string>Select Window</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0" colspan="5">
      <widget class="QListWidget" name="listLines">
       <property name="font">
        <font>
-        <family>Monospace</family>
+        <family>DejaVu Sans Mono</family>
+        <pointsize>13</pointsize>
        </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: #335; color: white;</string>
       </property>
       <property name="selectionMode">
        <enum>QAbstractItemView::ExtendedSelection</enum>
@@ -37,10 +61,20 @@
       <property name="selectionRectVisible">
        <bool>false</bool>
       </property>
+      <item>
+       <property name="text">
+        <string>line one</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>line two</string>
+       </property>
+      </item>
      </widget>
     </item>
-    <item row="1" column="8">
-     <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0,0,0">
+    <item row="1" column="5">
+     <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0,0,0,0">
       <item row="2" column="0">
        <widget class="QPushButton" name="buttonSpeak">
         <property name="sizePolicy">
@@ -99,22 +133,77 @@
         </property>
        </widget>
       </item>
+      <item row="4" column="0">
+       <layout class="QFormLayout" name="formLayout_2">
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="numSpeech">
+          <property name="maximum">
+           <number>100</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>type</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="numType">
+          <property name="maximum">
+           <number>100</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>speech</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QComboBox" name="cmbVoice">
+          <item>
+           <property name="text">
+            <string>m1</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>m2</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>m3</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>m4</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>m5</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>voice</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
      </layout>
     </item>
-    <item row="0" column="8">
-     <widget class="QPushButton" name="buttonSelectWin">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="text">
-       <string>Select Window</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0" colspan="9">
+    <item row="0" column="0" colspan="4">
      <widget class="QLabel" name="labelFilename">
       <property name="text">
        <string>_</string>
@@ -128,7 +217,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>452</width>
+     <width>526</width>
      <height>20</height>
     </rect>
    </property>
