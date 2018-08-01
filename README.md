@@ -1,6 +1,8 @@
 # tpyer
 A NIH text typing tool
 
+![aaa](sample.jpg)
+
 # setup
 0. pip install virtualenv
 1. virtualenv env
